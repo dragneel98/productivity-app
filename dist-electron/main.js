@@ -36,6 +36,15 @@ const updateTaskStatus = (id, status) => {
   const stmt = db.prepare("UPDATE tasks SET status = ? WHERE id = ?");
   return stmt.run(status, id);
 };
+const updateTaskTime = (id, minutesWorked) => {
+  const hoursWorked = minutesWorked / 60;
+  const stmt = db.prepare(`
+    UPDATE tasks 
+    SET estimatedHours = MAX(0, estimatedHours - ?)
+    WHERE id = ?
+  `);
+  return stmt.run(hoursWorked, id);
+};
 const deleteTask = (id) => {
   const stmt = db.prepare("DELETE FROM tasks WHERE id = ?");
   return stmt.run(id);
@@ -53,6 +62,9 @@ electron.app.whenReady().then(() => {
   });
   electron.ipcMain.handle("delete-task", (_event, id) => {
     return deleteTask(id);
+  });
+  electron.ipcMain.handle("update-task-time", (_event, { id, minutesWorked }) => {
+    return updateTaskTime(id, minutesWorked);
   });
   electron.ipcMain.on("tasks-updated", () => {
     electron.BrowserWindow.getAllWindows().forEach((win) => {

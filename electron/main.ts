@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
-import { getTasks, addTask, updateTaskStatus, deleteTask } from './database';
+import { getTasks, addTask, updateTaskStatus, deleteTask, updateTaskTime } from './database';
 
 app.whenReady().then(() => {
   createWindow();
@@ -19,6 +19,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle('delete-task', (_event, id) => {
     return deleteTask(id);
+  });
+
+  ipcMain.handle('update-task-time', (_event, { id, minutesWorked }) => {
+    return updateTaskTime(id, minutesWorked);
   });
 
   // Echo 'tasks-updated' to all renderers so they can refresh their lists immediately

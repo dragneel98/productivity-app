@@ -27,5 +27,7 @@ contextBridge.exposeInMainWorld('db', {
     ipcRenderer.invoke('add-task', task),
   updateTaskStatus: (id: number, status: 'pending' | 'in_progress' | 'completed') =>
     ipcRenderer.invoke('update-task-status', { id, status }),
+  updateTaskTime: (id: number, minutesWorked: number) =>
+    ipcRenderer.invoke('update-task-time', { id, minutesWorked }),
   deleteTask: (id: number) => ipcRenderer.invoke('delete-task', id),
 });

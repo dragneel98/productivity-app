@@ -12,6 +12,7 @@ declare global {
       getTasks: () => Promise<Task[]>;
       addTask: (task: { title: string; description?: string; estimatedHours: number }) => Promise<any>;
       updateTaskStatus: (id: number, status: 'pending' | 'in_progress' | 'completed') => Promise<any>;
+      updateTaskTime: (id: number, minutesWorked: number) => Promise<void>;
       deleteTask: (id: number) => Promise<any>;
     }
   }

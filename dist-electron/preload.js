@@ -22,5 +22,6 @@ electron.contextBridge.exposeInMainWorld("db", {
   getTasks: () => electron.ipcRenderer.invoke("get-tasks"),
   addTask: (task) => electron.ipcRenderer.invoke("add-task", task),
   updateTaskStatus: (id, status) => electron.ipcRenderer.invoke("update-task-status", { id, status }),
+  updateTaskTime: (id, minutesWorked) => electron.ipcRenderer.invoke("update-task-time", { id, minutesWorked }),
   deleteTask: (id) => electron.ipcRenderer.invoke("delete-task", id)
 });

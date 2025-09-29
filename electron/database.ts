@@ -56,6 +56,17 @@ export const updateTaskStatus = (id: number, status: Task['status']): Database.R
   return stmt.run(status, id);
 };
 
+export const updateTaskTime = (id: number, minutesWorked: number): Database.RunResult => {
+  // Convertir minutos a horas y restarlos de las horas estimadas
+  const hoursWorked = minutesWorked / 60;
+  const stmt = db.prepare(`
+    UPDATE tasks 
+    SET estimatedHours = MAX(0, estimatedHours - ?)
+    WHERE id = ?
+  `);
+  return stmt.run(hoursWorked, id);
+};
+
 export const deleteTask = (id: number): Database.RunResult => {
   const stmt = db.prepare('DELETE FROM tasks WHERE id = ?');
   return stmt.run(id);
