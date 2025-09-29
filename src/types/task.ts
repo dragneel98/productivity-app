@@ -1,6 +1,8 @@
 export interface Task {
   id: number;
-  name: string;
+  title: string;
+  description?: string;
+  status: 'pending' | 'in_progress' | 'completed';
   estimatedHours: number;
-  completed: boolean;
+  createdAt: string;
 }

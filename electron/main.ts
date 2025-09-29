@@ -1,60 +1,52 @@
-import { app, BrowserWindow } from 'electron';
-import path from 'node:path';
+import { app, BrowserWindow, ipcMain } from 'electron';
+import path from 'path';
+import { getTasks, addTask, updateTaskStatus, deleteTask } from './database';
 
-// The built directory structure
-//
-// ├─┬ dist-electron
-// │ ├─┬ main.js
-// │ └─┬ preload.js
-// ├─┬ dist
-// │ └── index.html
-// │
-process.env.DIST = path.join(__dirname, '../dist');
-process.env.VITE_PUBLIC = process.env.VITE_DEV_SERVER_URL
-  ? path.join(process.env.DIST, '../public')
-  : process.env.DIST;
+app.whenReady().then(() => {
+  createWindow();
 
-let win: BrowserWindow | null;
-// 🚧 Use ['ENV_NAME'] avoid vite:define plugin - Vite@2.x
-const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL'];
+  ipcMain.handle('get-tasks', () => {
+    return getTasks();
+  });
 
+  ipcMain.handle('add-task', (_event, task) => {
+    return addTask(task);
+  });
+
+  ipcMain.handle('update-task-status', (_event, { id, status }) => {
+    return updateTaskStatus(id, status);
+  });
+
+  ipcMain.handle('delete-task', (_event, id) => {
+    return deleteTask(id);
+  });
+});
 function createWindow() {
-  win = new BrowserWindow({
-    icon: path.join(process.env.VITE_PUBLIC!, 'electron-vite.svg'),
+  const win = new BrowserWindow({
+    width: 1100,
+    height: 720,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
     },
   });
 
-  // Test active push message to Renderer-process.
-  win.webContents.on('did-finish-load', () => {
-    win?.webContents.send('main-process-message', (new Date).toLocaleString());
-  });
-
-  if (VITE_DEV_SERVER_URL) {
-    win.loadURL(VITE_DEV_SERVER_URL);
+  const devServerUrl = process.env.VITE_DEV_SERVER_URL;
+  if (devServerUrl) {
+    win.loadURL(devServerUrl);
+    win.webContents.openDevTools({ mode: 'detach' });
   } else {
-    // win.loadFile('dist/index.html')
-    win.loadFile(path.join(process.env.DIST!, 'index.html'));
+    // In production, load the built index.html from Vite
+    win.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 }
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-    win = null;
-  }
+  if (process.platform !== 'darwin') app.quit();
 });
 
 app.on('activate', () => {
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
+  if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
 
-app.whenReady().then(createWindow);

@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 
 interface TaskFormProps {
-  addTask: (name: string, estimatedHours: number) => void;
+  addTask: (title: string, estimatedHours: number) => void;
 }
 
 const TaskForm: React.FC<TaskFormProps> = ({ addTask }) => {
-  const [name, setName] = useState('');
-  const [estimatedHours, setEstimatedHours] = useState('');
+  const [title, setTitle] = useState('');
+  const [hours, setHours] = useState<string>('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (name.trim() && estimatedHours) {
-      addTask(name, parseFloat(estimatedHours));
-      setName('');
-      setEstimatedHours('');
+    const trimmed = title.trim();
+    const parsedHours = Number(hours);
+    if (trimmed && !Number.isNaN(parsedHours) && parsedHours >= 0) {
+      addTask(trimmed, parsedHours);
+      setTitle('');
+      setHours('');
     }
   };
 
@@ -21,17 +23,17 @@ const TaskForm: React.FC<TaskFormProps> = ({ addTask }) => {
     <form onSubmit={handleSubmit} className="task-form">
       <input
         type="text"
-        placeholder="Task name"
-        value={name}
-        onChange={e => setName(e.target.value)}
+        placeholder="Task title"
+        value={title}
+        onChange={e => setTitle(e.target.value)}
       />
       <input
         type="number"
         placeholder="Estimated hours"
-        value={estimatedHours}
-        onChange={e => setEstimatedHours(e.target.value)}
-        step="0.5"
-        min="0"
+        value={hours}
+        min={0}
+        step={0.5}
+        onChange={e => setHours(e.target.value)}
       />
       <button type="submit">Add Task</button>
     </form>

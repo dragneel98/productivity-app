@@ -18,7 +18,14 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
     const [channel, ...omit] = args;
     return ipcRenderer.invoke(channel, ...omit);
   },
+});
 
-  // You can expose other APTs you need here.
-  // ... 
+// Expose database API directly on window.db, matching src/types/electron.d.ts
+contextBridge.exposeInMainWorld('db', {
+  getTasks: () => ipcRenderer.invoke('get-tasks'),
+  addTask: (task: { title: string; description?: string; estimatedHours: number }) =>
+    ipcRenderer.invoke('add-task', task),
+  updateTaskStatus: (id: number, status: 'pending' | 'in_progress' | 'completed') =>
+    ipcRenderer.invoke('update-task-status', { id, status }),
+  deleteTask: (id: number) => ipcRenderer.invoke('delete-task', id),
 });

@@ -9,21 +9,22 @@ interface TaskItemProps {
 
 const TaskItem: React.FC<TaskItemProps> = ({ task, toggleTask, deleteTask }) => {
   return (
-    <div className={`task-item ${task.completed ? 'completed' : ''}`}>
+    <div className={`task-item ${task.status}`}>
       <div className="task-info">
         <input
           type="checkbox"
-          checked={task.completed}
+          checked={task.status === 'completed'}
           onChange={() => toggleTask(task.id)}
         />
-        <span className="task-name">{task.name}</span>
-        <span className="task-hours">{task.estimatedHours}h</span>
+        <span className="task-name">{task.title}</span>
+        <span className="task-status">Status: {task.status}</span>
       </div>
       <div className="task-actions">
         <button onClick={() => deleteTask(task.id)} className="delete-btn">Delete</button>
       </div>
     </div>
   );
+
 };
 
 export default TaskItem;

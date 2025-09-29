@@ -9,37 +9,46 @@ import './index.css';
 const App: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
 
+  const fetchTasks = async () => {
+    const fetchedTasks = await window.db.getTasks();
+    setTasks(fetchedTasks);
+  };
+
   useEffect(() => {
-    const storedTasks = localStorage.getItem('tasks');
-    if (storedTasks) {
-      setTasks(JSON.parse(storedTasks));
-    }
+    fetchTasks();
+
+    const handleTaskUpdate = () => fetchTasks();
+    window.ipcRenderer.on('tasks-updated', handleTaskUpdate);
+
+    return () => {
+      window.ipcRenderer.off('tasks-updated', handleTaskUpdate);
+    };
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('tasks', JSON.stringify(tasks));
-  }, [tasks]);
-
-  const addTask = (name: string, estimatedHours: number) => {
-    const newTask: Task = {
-      id: Date.now(),
-      name,
-      estimatedHours,
-      completed: false,
-    };
-    setTasks([...tasks, newTask]);
+  const addTask = async (title: string, estimatedHours: number) => {
+    await window.db.addTask({ title, estimatedHours });
+    window.ipcRenderer.send('tasks-updated');
   };
 
-  const toggleTask = (id: number) => {
-    setTasks(
-      tasks.map(task =>
-        task.id === id ? { ...task, completed: !task.completed } : task
-      )
-    );
+ const toggleTask = async (id: number) => {
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+      let newStatus: "pending" | "in_progress" | "completed" = "pending";
+      if (task.status === "pending") {
+        newStatus = "in_progress";
+      } else if (task.status === "in_progress") {
+        newStatus = "completed";
+      } else {
+        newStatus = "pending";
+      }
+      await window.db.updateTaskStatus(id, newStatus);
+      window.ipcRenderer.send('tasks-updated');
+    }
   };
 
-  const deleteTask = (id: number) => {
-    setTasks(tasks.filter(task => task.id !== id));
+  const deleteTask = async (id: number) => {
+    await window.db.deleteTask(id);
+    window.ipcRenderer.send('tasks-updated');
   };
 
   return (

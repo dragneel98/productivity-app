@@ -17,6 +17,10 @@ electron.contextBridge.exposeInMainWorld("ipcRenderer", {
     const [channel, ...omit] = args;
     return electron.ipcRenderer.invoke(channel, ...omit);
   }
-  // You can expose other APTs you need here.
-  // ... 
+});
+electron.contextBridge.exposeInMainWorld("db", {
+  getTasks: () => electron.ipcRenderer.invoke("get-tasks"),
+  addTask: (task) => electron.ipcRenderer.invoke("add-task", task),
+  updateTaskStatus: (id, status) => electron.ipcRenderer.invoke("update-task-status", { id, status }),
+  deleteTask: (id) => electron.ipcRenderer.invoke("delete-task", id)
 });
