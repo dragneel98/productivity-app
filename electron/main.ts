@@ -20,6 +20,13 @@ app.whenReady().then(() => {
   ipcMain.handle('delete-task', (_event, id) => {
     return deleteTask(id);
   });
+
+  // Echo 'tasks-updated' to all renderers so they can refresh their lists immediately
+  ipcMain.on('tasks-updated', () => {
+    BrowserWindow.getAllWindows().forEach(win => {
+      win.webContents.send('tasks-updated');
+    });
+  });
 });
 function createWindow() {
   const win = new BrowserWindow({

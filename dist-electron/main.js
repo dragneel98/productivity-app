@@ -54,6 +54,11 @@ electron.app.whenReady().then(() => {
   electron.ipcMain.handle("delete-task", (_event, id) => {
     return deleteTask(id);
   });
+  electron.ipcMain.on("tasks-updated", () => {
+    electron.BrowserWindow.getAllWindows().forEach((win) => {
+      win.webContents.send("tasks-updated");
+    });
+  });
 });
 function createWindow() {
   const win = new electron.BrowserWindow({
