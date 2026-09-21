@@ -18,7 +18,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onDelete }) => {
         /> 
         <span className="task-name">{task.title}</span>
         <span className="task-status">Status: {task.status}</span>
-        <span className="task-hours">Horas: {task.estimatedHours}</span>
+        <span className="task-hours">Horas: {task.estimatedHours.toFixed(2)}</span>
       </div>
       <div className="task-actions">
         <button onClick={() => onDelete(task.id)} className="delete-btn">
