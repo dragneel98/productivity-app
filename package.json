@@ -5,8 +5,10 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && electron-builder",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "build": "tsc -b && vite build && electron-builder",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "preview": "vite preview",
     "postinstall": "electron-builder install-app-deps"
   },
@@ -18,6 +20,7 @@
     "recharts": "^2.12.7"
   },
   "devDependencies": {
+    "@testing-library/react": "^16.1.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/react": "^18.2.79",
     "@types/react-dom": "^18.2.25",
@@ -31,9 +34,16 @@
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "jsdom": "^25.0.1",
     "typescript": "^5.3.3",
     "vite": "^5.1.1",
     "vite-plugin-electron": "^0.28.2",
-    "vite-plugin-electron-renderer": "^0.14.5"
+    "vite-plugin-electron-renderer": "^0.14.5",
+    "vitest": "^2.1.9"
+  },
+  "build": {
+    "directories": {
+      "output": "release"
+    }
   }
 }

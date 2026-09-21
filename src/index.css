@@ -13,6 +13,16 @@ body {
     sans-serif;
   background-color: var(--background-color);
   color: var(--text-color);
+  transition: background-color 300ms ease;
+}
+
+body.break-mode {
+  --background-color: #dcfce7;
+  --primary-color: #059669;
+}
+
+body.break-mode .app-header {
+  transition: color 300ms ease;
 }
 
 .app-container {

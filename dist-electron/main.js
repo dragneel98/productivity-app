@@ -14,6 +14,7 @@ db.exec(`
     description TEXT,
     status TEXT NOT NULL DEFAULT 'pending',
     estimatedHours REAL NOT NULL DEFAULT 0,
+    workedHours REAL NOT NULL DEFAULT 0,
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 `);
@@ -22,6 +23,10 @@ db.exec(`
   const hasEstimated = columns.some((c) => c.name === "estimatedHours");
   if (!hasEstimated) {
     db.exec("ALTER TABLE tasks ADD COLUMN estimatedHours REAL NOT NULL DEFAULT 0");
+  }
+  const hasWorked = columns.some((c) => c.name === "workedHours");
+  if (!hasWorked) {
+    db.exec("ALTER TABLE tasks ADD COLUMN workedHours REAL NOT NULL DEFAULT 0");
   }
 })();
 const getTasks = () => {
@@ -40,15 +45,18 @@ const updateTaskTime = (id, minutesWorked) => {
   const hoursWorked = minutesWorked / 60;
   const stmt = db.prepare(`
     UPDATE tasks 
-    SET estimatedHours = MAX(0, estimatedHours - ?)
+    SET estimatedHours = MAX(0, estimatedHours - ?),
+        workedHours = workedHours + ?
     WHERE id = ?
   `);
-  return stmt.run(hoursWorked, id);
+  return stmt.run(hoursWorked, hoursWorked, id);
 };
 const deleteTask = (id) => {
   const stmt = db.prepare("DELETE FROM tasks WHERE id = ?");
   return stmt.run(id);
 };
+let mainWindow = null;
+electron.app.setAppUserModelId("com.productivity.app");
 electron.app.whenReady().then(() => {
   createWindow();
   electron.ipcMain.handle("get-tasks", () => {
@@ -71,6 +79,16 @@ electron.app.whenReady().then(() => {
       win.webContents.send("tasks-updated");
     });
   });
+  electron.ipcMain.on("pomodoro-state-changed", (_event, { isBreak }) => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    mainWindow.setProgressBar(isBreak ? 1 : -1);
+    mainWindow.setBackgroundColor(isBreak ? "#dcfce7" : "#f0f2f5");
+  });
+  electron.ipcMain.on("pomodoro-notification", (_event, { title, body }) => {
+    if (electron.Notification.isSupported()) {
+      new electron.Notification({ title, body }).show();
+    }
+  });
 });
 function createWindow() {
   const win = new electron.BrowserWindow({
@@ -81,6 +99,10 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false
     }
+  });
+  mainWindow = win;
+  win.on("closed", () => {
+    if (mainWindow === win) mainWindow = null;
   });
   const devServerUrl = process.env.VITE_DEV_SERVER_URL;
   if (devServerUrl) {

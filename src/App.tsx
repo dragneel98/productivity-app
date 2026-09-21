@@ -3,6 +3,7 @@ import TaskList from './components/TaskList';
 import TaskForm from './components/TaskForm';
 import { PomodoroTimer } from './components/PomodoroTimer';
 import Dashboard from './components/Dashboard';
+import { getTasks, updateTaskTime, subscribeToTaskUpdates } from './services/taskService';
 import type { Task } from './types/task';
 import './index.css';
 
@@ -10,65 +11,22 @@ const App: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
 
   const fetchTasks = async () => {
-    const fetchedTasks = await window.db.getTasks();
+    const fetchedTasks = await getTasks();
     setTasks(fetchedTasks);
   };
 
   useEffect(() => {
     fetchTasks();
-
-    const handleTaskUpdate = () => fetchTasks();
-    window.ipcRenderer.on('tasks-updated', handleTaskUpdate);
-
-    return () => {
-      window.ipcRenderer.off('tasks-updated', handleTaskUpdate);
-    };
+    const unsubscribe = subscribeToTaskUpdates(fetchTasks);
+    return () => unsubscribe();
   }, []);
 
-  const addTask = async (title: string, estimatedHours: number) => {
-    await window.db.addTask({ title, estimatedHours });
-    window.ipcRenderer.send('tasks-updated');
-  };
-
- const toggleTask = async (id: number) => {
-    const task = tasks.find(t => t.id === id);
-    if (task) {
-      let newStatus: "pending" | "in_progress" | "completed" = "pending";
-      if (task.status === "pending") {
-        newStatus = "in_progress";
-      } else if (task.status === "in_progress") {
-        newStatus = "completed";
-      } else {
-        newStatus = "pending";
-      }
-      await window.db.updateTaskStatus(id, newStatus);
-      window.ipcRenderer.send('tasks-updated');
-    }
-  };
-
-  const deleteTask = async (id: number) => {
-    await window.db.deleteTask(id);
-    window.ipcRenderer.send('tasks-updated');
-  };
-
-  // Función para actualizar el tiempo trabajado en una tarea
-  const updateTaskTime = async (taskId: number, minutesWorked: number) => {
+  const handleUpdateTaskTime = async (taskId: number, minutesWorked: number) => {
     try {
-      // Actualizar la tarea en la base de datos
-      await window.db.updateTaskTime(taskId, minutesWorked);
-      // Actualizar el estado local
-      setTasks(tasks.map(task => {
-        if (task.id === taskId) {
-          const updatedHours = (task.estimatedHours || 0) - (minutesWorked / 60);
-          return {
-            ...task,
-            estimatedHours: Math.max(0, updatedHours)
-          };
-        }
-        return task;
-      }));
+      await updateTaskTime(taskId, minutesWorked);
+      await fetchTasks(); // Refresh tasks to get updated times
     } catch (error) {
-      console.error('Error actualizando el tiempo de la tarea:', error);
+      console.error('Error updating task time:', error);
     }
   };
 
@@ -80,13 +38,15 @@ const App: React.FC = () => {
       <main>
         <div className="main-content">
           <div className="left-column">
-            <TaskForm addTask={addTask} />
-            <TaskList tasks={tasks} toggleTask={toggleTask} deleteTask={deleteTask} />
+            <TaskForm />
+            <TaskList 
+              tasks={tasks} 
+            />
           </div>
           <div className="right-column">
             <PomodoroTimer 
               tasks={tasks.filter(t => t.status !== 'completed')} 
-              onTimeTracked={updateTaskTime} 
+              onTimeTracked={handleUpdateTaskTime} 
             />
             <Dashboard tasks={tasks} />
           </div>

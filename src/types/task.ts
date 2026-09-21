@@ -4,5 +4,6 @@ export interface Task {
   description?: string;
   status: 'pending' | 'in_progress' | 'completed';
   estimatedHours: number;
+  workedHours: number;
   createdAt: string;
 }

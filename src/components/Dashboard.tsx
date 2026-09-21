@@ -9,45 +9,65 @@ interface DashboardProps {
 
 type TimeRange = 'day' | 'week' | 'month';
 
+const getDateRange = (date: Date, timeRange: TimeRange): [Date, Date] => {
+  const startDate = new Date(date);
+  const endDate = new Date(date);
+
+  if (timeRange === 'day') {
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
+  } else if (timeRange === 'week') {
+    const day = startDate.getDay();
+    const diff = startDate.getDate() - day + (day === 0 ? -6 : 1);
+    startDate.setDate(diff);
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setTime(startDate.getTime());
+    endDate.setDate(startDate.getDate() + 6);
+    endDate.setHours(23, 59, 59, 999);
+  } else {
+    startDate.setDate(1);
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setMonth(endDate.getMonth() + 1, 0);
+    endDate.setHours(23, 59, 59, 999);
+  }
+
+  return [startDate, endDate];
+};
+
 const Dashboard: React.FC<DashboardProps> = ({ tasks }) => {
   const [timeRange, setTimeRange] = useState<TimeRange>('week');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  // Filtrar tareas completadas
+  // Las horas trabajadas existen aunque la tarea todavía no esté completada.
+  const trackedTasks = useMemo(() =>
+    tasks.filter(task => task.workedHours > 0),
+    [tasks]
+  );
+
+  // Filtrar tareas completadas para el contador independiente del tiempo trabajado.
   const completedTasks = useMemo(() => 
     tasks.filter(task => task.status === 'completed'),
     [tasks]
   );
 
-  // Agrupar tareas por día/semana/mes
-  const chartData = useMemo(() => {
-    const now = new Date(selectedDate);
-    let startDate = new Date(now);
-    let endDate = new Date(now);
-    
-    // Ajustar el rango de fechas según la selección
-    if (timeRange === 'day') {
-      startDate.setHours(0, 0, 0, 0);
-      endDate.setHours(23, 59, 59, 999);
-    } else if (timeRange === 'week') {
-      const day = now.getDay();
-      const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Ajuste para que la semana empiece en lunes
-      startDate = new Date(now.setDate(diff));
-      startDate.setHours(0, 0, 0, 0);
-      endDate = new Date(startDate);
-      endDate.setDate(startDate.getDate() + 6);
-      endDate.setHours(23, 59, 59, 999);
-    } else { // month
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      endDate.setHours(23, 59, 59, 999);
-    }
-
-    // Filtrar tareas en el rango de fechas
-    const tasksInRange = completedTasks.filter(task => {
+  const tasksInRange = useMemo(() => {
+    const [startDate, endDate] = getDateRange(selectedDate, timeRange);
+    return trackedTasks.filter(task => {
       const taskDate = new Date(task.createdAt);
       return taskDate >= startDate && taskDate <= endDate;
     });
+  }, [trackedTasks, timeRange, selectedDate]);
+
+  const completedTasksInRange = useMemo(() => {
+    const [startDate, endDate] = getDateRange(selectedDate, timeRange);
+    return completedTasks.filter(task => {
+      const taskDate = new Date(task.createdAt);
+      return taskDate >= startDate && taskDate <= endDate;
+    });
+  }, [completedTasks, timeRange, selectedDate]);
+
+  // Agrupar tareas por día/semana/mes
+  const chartData = useMemo(() => {
 
     // Agrupar por fecha
     const grouped = tasksInRange.reduce((acc, task) => {
@@ -66,35 +86,35 @@ const Dashboard: React.FC<DashboardProps> = ({ tasks }) => {
       if (!acc[key]) {
         acc[key] = 0;
       }
-      acc[key] += task.estimatedHours || 0;
+      acc[key] += task.workedHours || 0;
       return acc;
     }, {} as Record<string, number>);
 
     // Convertir a array para el gráfico
     return Object.entries(grouped).map(([name, horas]) => ({
       name,
-      'Horas trabajadas': Number(horas.toFixed(1))
+      'Horas trabajadas': Number(horas.toFixed(2))
     }));
-  }, [completedTasks, timeRange, selectedDate]);
+  }, [tasksInRange, timeRange]);
 
   // Calcular total de horas
   const totalHours = useMemo(
-    () => chartData.reduce((sum, item) => sum + item['Horas trabajadas'], 0),
-    [chartData]
+    () => tasksInRange.reduce((sum, task) => sum + (task.workedHours || 0), 0),
+    [tasksInRange]
   );
 
   // Calcular horas por tipo de tarea
   const hoursByTaskType = useMemo(() => {
     const types = new Map<string, number>();
-    completedTasks.forEach(task => {
+    tasksInRange.forEach(task => {
       const type = task.title.split(':')[0] || 'Otras';
-      types.set(type, (types.get(type) || 0) + (task.estimatedHours || 0));
+      types.set(type, (types.get(type) || 0) + (task.workedHours || 0));
     });
     return Array.from(types.entries()).map(([name, value]) => ({
       name,
-      'Horas': Number(value.toFixed(1))
+      'Horas': Number(value.toFixed(2))
     }));
-  }, [completedTasks]);
+  }, [tasksInRange]);
 
   const handleDateChange = (increment: number) => {
     const newDate = new Date(selectedDate);
@@ -160,11 +180,11 @@ const Dashboard: React.FC<DashboardProps> = ({ tasks }) => {
       <div className="dashboard-stats">
         <div className="stat-card">
           <h3>Total horas trabajadas</h3>
-          <p className="stat-value">{totalHours.toFixed(1)} hrs</p>
+          <p className="stat-value">{totalHours.toFixed(2)} hrs</p>
         </div>
         <div className="stat-card">
           <h3>Tareas completadas</h3>
-          <p className="stat-value">{completedTasks.length}</p>
+          <p className="stat-value">{completedTasksInRange.length}</p>
         </div>
       </div>
 

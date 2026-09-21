@@ -1,6 +1,10 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, Notification } from 'electron';
 import path from 'path';
 import { getTasks, addTask, updateTaskStatus, deleteTask, updateTaskTime } from './database';
+
+let mainWindow: BrowserWindow | null = null;
+
+app.setAppUserModelId('com.productivity.app');
 
 app.whenReady().then(() => {
   createWindow();
@@ -31,6 +35,20 @@ app.whenReady().then(() => {
       win.webContents.send('tasks-updated');
     });
   });
+
+  ipcMain.on('pomodoro-state-changed', (_event, { isBreak }: { isBreak: boolean }) => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+
+    // Windows muestra este progreso como una línea verde en el botón de la app.
+    mainWindow.setProgressBar(isBreak ? 1 : -1);
+    mainWindow.setBackgroundColor(isBreak ? '#dcfce7' : '#f0f2f5');
+  });
+
+  ipcMain.on('pomodoro-notification', (_event, { title, body }: { title: string; body: string }) => {
+    if (Notification.isSupported()) {
+      new Notification({ title, body }).show();
+    }
+  });
 });
 function createWindow() {
   const win = new BrowserWindow({
@@ -41,6 +59,10 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
+  });
+  mainWindow = win;
+  win.on('closed', () => {
+    if (mainWindow === win) mainWindow = null;
   });
 
   const devServerUrl = process.env.VITE_DEV_SERVER_URL;
@@ -60,4 +82,3 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
-

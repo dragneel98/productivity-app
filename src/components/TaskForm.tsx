@@ -1,21 +1,22 @@
 import React, { useState } from 'react';
+import { addTask } from '../services/taskService';
 
-interface TaskFormProps {
-  addTask: (title: string, estimatedHours: number) => void;
-}
-
-const TaskForm: React.FC<TaskFormProps> = ({ addTask }) => {
+const TaskForm: React.FC = () => {
   const [title, setTitle] = useState('');
   const [hours, setHours] = useState<string>('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = title.trim();
     const parsedHours = Number(hours);
     if (trimmed && !Number.isNaN(parsedHours) && parsedHours >= 0) {
-      addTask(trimmed, parsedHours);
-      setTitle('');
-      setHours('');
+      try {
+        await addTask({ title: trimmed, estimatedHours: parsedHours });
+        setTitle('');
+        setHours('');
+      } catch (error) {
+        console.error('Error adding task:', error);
+      }
     }
   };
 
@@ -29,10 +30,10 @@ const TaskForm: React.FC<TaskFormProps> = ({ addTask }) => {
       />
       <input
         type="number"
-        placeholder="Estimated hours"
+        placeholder="Hours"
+        min="0"
+        step="0.5"
         value={hours}
-        min={0}
-        step={0.5}
         onChange={e => setHours(e.target.value)}
       />
       <button type="submit">Add Task</button>
